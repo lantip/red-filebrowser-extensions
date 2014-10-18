@@ -6,11 +6,15 @@ from PIL import ImageFile
 from django.shortcuts import render_to_response, HttpResponse, Http404
 from django.template import RequestContext as Context
 from django.http import HttpResponseRedirect, Http404
+from django.contrib.admin.views.decorators import staff_member_required
+from django.views.decorators.cache import never_cache
 
 from filebrowser import sites
 from filebrowser.base import FileObject
 from filebrowser import functions
 from filebrowser import settings as fb_settings
+from django.conf import settings
+from filebrowser.utils import path_strip, scale_and_crop
 
 from forms import ImageCropDataForm
 
@@ -53,11 +57,11 @@ class CropFileBrowserSite(sites.FileBrowserSite):
         try:
             f = self.storage.open(org_path)
             im = Image.open(f)
-            version_path = functions.get_version_path(org_path, version, site=self)
+            version_path = self.get_version_path(org_path, version)
             root, ext = os.path.splitext(version_path)
             size_args.update({
-                'width' : VERSIONS[version].get('width'),
-                'height' : VERSIONS[version].get('height')
+                'width' : fb_settings.VERSIONS[version].get('width'),
+                'height' : fb_settings.VERSIONS[version].get('height')
             })
 
             im = self._do_crop(im, **size_args)
@@ -77,6 +81,31 @@ class CropFileBrowserSite(sites.FileBrowserSite):
                 f.close()
             except:
                 pass
+    def get_version_path(self, value, version_prefix):
+        """
+        Construct the PATH to an Image version.
+        value has to be a path relative to the location of 
+        the site's storage.
+        
+        version_filename = filename + version_prefix + ext
+        Returns a relative path to the location of the site's storage.
+        """
+        
+        if self.storage.isfile(value):
+            path, filename = os.path.split(value)
+            relative_path = path_strip(os.path.join(path,''), self.directory)
+            filename, ext = os.path.splitext(filename)
+            version_filename = filename + "_" + version_prefix + ext
+            if fb_settings.VERSIONS_BASEDIR:
+                return os.path.join(fb_settings.VERSIONS_BASEDIR, relative_path, version_filename)
+            else:
+                return os.path.join(self.directory, relative_path, version_filename)
+        else:
+            return None
+
+    def filebrowser_view(self, view):
+        "Only let staff browse the files"
+        return staff_member_required(never_cache(view))
 
     def crop(self, request):
         """

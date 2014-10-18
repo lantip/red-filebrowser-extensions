@@ -33,3 +33,7 @@ and add the following URL-patterns (before any admin-urls):
 urlpatterns = patterns('',
    url(r'^admin/filebrowser/', include(site.urls)),
 )
+
+Lantip Notes
+------------
+patched crop_filebrowser.sites to be able to work with filebrowser 3.5+
