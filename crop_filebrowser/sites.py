@@ -21,7 +21,7 @@ from forms import ImageCropDataForm
 class CropFileBrowserSite(sites.FileBrowserSite):
 
     def get_urls(self):
-        from django.conf.urls.defaults import patterns, url, include
+        from django.conf.urls import patterns, url, include
 
         urlpatterns = super(CropFileBrowserSite, self).get_urls()
 
